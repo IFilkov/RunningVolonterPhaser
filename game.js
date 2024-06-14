@@ -26,9 +26,13 @@ let hero;
 let enemy1;
 let enemy2;
 let graphics;
+let scoreText;
+let score = 0;
+let healthBar;
+let healthBarBg;
+let health = 100; // Начальный уровень здоровья
 const spectators = [];
 const spectatorRadius = 10;
-const spectatorSpeed = 50;
 const gridSize = 50; // Размер клетки сетки
 const rows = 20; // Количество рядов
 const cols = 20; // Количество колонок
@@ -37,31 +41,40 @@ const seatHeight = 15;
 const seatGap = 5; // Промежуток между сидениями
 const rowGap = seatHeight; // Промежуток между рядами
 let seats = []; // Массив мест для зрителей
+let availableSeats = []; // Доступные места
 
 function preload() {
-  // No assets to load for this example
+  if (!this.textures.exists("empty")) {
+    const canvas = this.textures.createCanvas("empty", 1, 1).context;
+    canvas.fillStyle = "rgba(0,0,0,0)";
+    canvas.fillRect(0, 0, 1, 1);
+    this.textures.get("empty").refresh();
+  }
 }
 
 function create() {
   graphics = this.add.graphics({ fillStyle: { color: 0xffffff } });
 
-  hero = this.physics.add.image(400, 300, null);
-  hero.radius = 20;
+  hero = this.physics.add.image(400, 300, "empty");
+  hero.radius = spectatorRadius;
   hero.color = 0x0000ff;
   hero.speed = 200;
   hero.setCollideWorldBounds(true);
 
-  enemy1 = this.physics.add.image(100, 100, null);
-  enemy1.radius = 20;
+  enemy1 = this.physics.add.image(100, 100, "empty");
+  enemy1.radius = spectatorRadius;
   enemy1.color = 0x000000;
   enemy1.speed = 100;
   enemy1.setCollideWorldBounds(true);
 
-  enemy2 = this.physics.add.image(700, 500, null);
-  enemy2.radius = 20;
+  enemy2 = this.physics.add.image(700, 500, "empty");
+  enemy2.radius = spectatorRadius;
   enemy2.color = 0xff0000;
   enemy2.speed = 100;
   enemy2.setCollideWorldBounds(true);
+
+  // Создание группы зрителей для обработки коллизий
+  this.spectatorGroup = this.physics.add.group();
 
   // Создание зрителей
   createSpectatorPositions();
@@ -81,6 +94,35 @@ function create() {
 
   // Рисуем места для зрителей
   drawSeats(50, 50, rows, cols); // Пример параметров: начальная позиция (50, 50), 20 рядов, 20 колонок
+
+  // Создание текста для счётчика
+  scoreText = this.add.text(config.width - 100, 20, "Score: 0", {
+    fontSize: "20px",
+    fill: "#000",
+  });
+  scoreText.setScrollFactor(0);
+
+  // Создание фона для шкалы здоровья
+  healthBarBg = this.add.graphics();
+  healthBarBg.fillStyle(0x000000, 1);
+  healthBarBg.fillRect(config.width - 200, 50, 150, 20);
+  healthBarBg.setScrollFactor(0);
+
+  // Создание шкалы здоровья
+  healthBar = this.add.graphics();
+  healthBar.setScrollFactor(0);
+  updateHealthBar();
+
+  // Обработка коллизий
+  this.physics.add.overlap(
+    hero,
+    this.spectatorGroup,
+    handleHeroSpectatorCollision,
+    null,
+    this
+  );
+  this.physics.add.overlap(hero, enemy1, handleHeroEnemyCollision, null, this);
+  this.physics.add.overlap(hero, enemy2, handleHeroEnemyCollision, null, this);
 }
 
 function update() {
@@ -98,6 +140,11 @@ function update() {
   updateHeroPosition.call(this);
   updateEnemyPosition.call(this, enemy1);
   updateEnemyPosition.call(this, enemy2);
+
+  // Обновление позиции счётчика и шкалы здоровья при изменении размера окна
+  scoreText.setPosition(config.width - 100, 20);
+  healthBarBg.setPosition(config.width - 200, 50);
+  updateHealthBar();
 }
 
 function drawCircle(x, y, radius, color) {
@@ -105,9 +152,21 @@ function drawCircle(x, y, radius, color) {
   graphics.fillCircle(x, y, radius);
 }
 
+// function updateHeroPosition() {
+//   if (hero.targetX !== undefined && hero.targetY !== undefined) {
+//     this.physics.moveTo(hero, hero.targetX, hero.targetY, hero.speed);
+//   }
+// }
 function updateHeroPosition() {
   if (hero.targetX !== undefined && hero.targetY !== undefined) {
     this.physics.moveTo(hero, hero.targetX, hero.targetY, hero.speed);
+    // Проверяем, достиг ли герой цели
+    if (
+      Phaser.Math.Distance.Between(hero.x, hero.y, hero.targetX, hero.targetY) <
+      10
+    ) {
+      hero.body.stop(); // Останавливаем героя
+    }
   }
 }
 
@@ -128,32 +187,54 @@ function createSpectatorPositions() {
   const startX = 50; // Начальная позиция X для сетки мест
   const startY = 50; // Начальная позиция Y для сетки мест
 
+  spectators.length = 0; // Очищаем массив зрителей
+  availableSeats.length = 0; // Очищаем массив доступных мест
+
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
-      spectators.push({
+      const seat = {
         x: startX + j * (seatWidth + seatGap),
         y: startY + i * (seatHeight + rowGap + seatGap),
         occupied: false,
-      });
+      };
+      spectators.push(seat);
+      availableSeats.push(seat);
     }
   }
 }
 
 // Функция для добавления зрителя
 function addSpectator() {
-  const y = Phaser.Math.Between(0, config.height);
-  const x = config.width + spectatorRadius; // Начальная позиция за пределами правой стороны холста
-  const target = spectators.find((pos) => !pos.occupied);
-  if (target) {
-    target.occupied = true;
-    spectators.push({
-      x,
-      y,
-      targetX: target.x,
-      targetY: target.y,
-      color: 0x000000,
-      moving: true,
-    });
+  if (availableSeats.length > 0) {
+    const y = Phaser.Math.Between(0, config.height);
+    const x = config.width + spectatorRadius; // Начальная позиция за пределами правой стороны холста
+    const targetIndex = Phaser.Math.Between(0, availableSeats.length - 1);
+    const target = availableSeats.splice(targetIndex, 1)[0]; // Удаляем место из доступных и получаем его
+
+    if (target) {
+      target.occupied = true;
+      const randomSpeed = Phaser.Math.Between(40, 100); // Случайная скорость от 40 до 100
+      const spectator = {
+        x,
+        y,
+        targetX: target.x,
+        targetY: target.y,
+        speed: randomSpeed,
+        color: 0x000000,
+        moving: true,
+        scored: false, // Флаг для проверки начисления очков
+      };
+      spectators.push(spectator);
+      const spectatorSprite = game.scene.scenes[0].spectatorGroup.create(
+        spectator.x,
+        spectator.y,
+        "empty"
+      );
+      spectatorSprite.radius = spectatorRadius;
+      spectatorSprite.setCircle(spectatorRadius); // Установим круглый коллайдер для спрайта
+      spectatorSprite.setCollideWorldBounds(true);
+      spectator.sprite = spectatorSprite;
+    }
   }
 }
 
@@ -168,9 +249,9 @@ function updateSpectators() {
         spectator.targetY
       );
       spectator.x +=
-        (Math.cos(angle) * spectatorSpeed * game.loop.delta) / 1000;
+        (Math.cos(angle) * spectator.speed * game.loop.delta) / 1000;
       spectator.y +=
-        (Math.sin(angle) * spectatorSpeed * game.loop.delta) / 1000;
+        (Math.sin(angle) * spectator.speed * game.loop.delta) / 1000;
 
       if (
         Phaser.Math.Distance.Between(
@@ -181,10 +262,70 @@ function updateSpectators() {
         ) < 1
       ) {
         spectator.moving = false;
+        spectator.color = 0x008800;
       }
     }
     drawCircle(spectator.x, spectator.y, spectatorRadius, spectator.color);
+
+    // Обновляем позицию спрайта зрителя
+    if (spectator.sprite) {
+      spectator.sprite.x = spectator.x;
+      spectator.sprite.y = spectator.y;
+    }
   });
+}
+
+// Функция для обработки коллизий героя со зрителями
+function handleHeroSpectatorCollision(hero, spectatorSprite) {
+  const spectator = spectators.find((s) => s.sprite === spectatorSprite);
+  if (spectator && !spectator.scored) {
+    spectator.color = 0x0000ff; // Перекрашиваем зрителя в голубой цвет
+    score += 1;
+    scoreText.setText("Score: " + score);
+    spectator.scored = true;
+  }
+}
+
+// Функция для обработки коллизий героя с врагами
+// function handleHeroEnemyCollision(hero, enemy) {
+//   if (health > 0) {
+//     health -= 10; // Уменьшаем здоровье на 10
+//     if (health <= 0) {
+//       health = 0;
+//       // Перезапуск игры
+//       restartGame();
+//     }
+//     updateHealthBar();
+//   }
+// }
+function handleHeroEnemyCollision(hero, enemy) {
+  if (health > 0) {
+    health -= 10;
+    if (health <= 0) {
+      health = 0;
+      restartGame();
+    }
+    updateHealthBar();
+    enemy.body.stop(); // Останавливаем врага при коллизии
+  }
+}
+
+// Функция для обновления шкалы здоровья
+function updateHealthBar() {
+  healthBar.clear();
+  const healthBarWidth = 150 * (health / 100);
+  const healthBarColor = health <= 20 ? 0xff0000 : 0x00ff00; // Красный цвет при <= 20%, иначе зелёный
+  healthBar.fillStyle(healthBarColor, 1);
+  healthBar.fillRect(config.width - 200, 50, healthBarWidth, 20);
+}
+
+// Функция для перезапуска игры
+function restartGame() {
+  score = 0;
+  health = 100;
+  spectators.length = 0;
+  availableSeats.length = 0;
+  game.scene.scenes[0].scene.restart();
 }
 
 // Функция для рисования мест для зрителей
