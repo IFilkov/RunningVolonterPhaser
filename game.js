@@ -42,6 +42,8 @@ const seatGap = 5; // Промежуток между сидениями
 const rowGap = seatHeight; // Промежуток между рядами
 let seats = []; // Массив мест для зрителей
 let availableSeats = []; // Доступные места
+let lastEnemyCollisionTime = 0; // Время последней коллизии с врагом
+const collisionCooldown = 1000; // Задержка в миллисекундах между уменьшением здоровья
 
 function preload() {
   if (!this.textures.exists("empty")) {
@@ -290,15 +292,22 @@ function handleHeroSpectatorCollision(hero, spectatorSprite) {
 
 // Функция для обработки коллизий героя с врагами
 function handleHeroEnemyCollision(hero, enemy) {
-  if (health > 0) {
-    health -= 10;
-    if (health <= 0) {
-      health = 0;
-      restartGame();
+  const currentTime = this.time.now;
+
+  if (currentTime - lastEnemyCollisionTime > collisionCooldown) {
+    if (health > 0) {
+      health -= 10;
+      if (health <= 0) {
+        health = 0;
+        restartGame();
+      }
+      updateHealthBar();
+      enemy.body.setVelocity(0, 0); // Останавливаем врага при коллизии
+      enemy.body.reset(enemy.x, enemy.y); // Фиксируем позицию врага
+
+      // Обновляем время последней коллизии
+      lastEnemyCollisionTime = currentTime;
     }
-    updateHealthBar();
-    enemy.body.setVelocity(0, 0); // Останавливаем врага при коллизии
-    enemy.body.reset(enemy.x, enemy.y); // Фиксируем позицию врага
   }
 }
 
