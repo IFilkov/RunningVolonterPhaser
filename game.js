@@ -152,11 +152,6 @@ function drawCircle(x, y, radius, color) {
   graphics.fillCircle(x, y, radius);
 }
 
-// function updateHeroPosition() {
-//   if (hero.targetX !== undefined && hero.targetY !== undefined) {
-//     this.physics.moveTo(hero, hero.targetX, hero.targetY, hero.speed);
-//   }
-// }
 function updateHeroPosition() {
   if (hero.targetX !== undefined && hero.targetY !== undefined) {
     this.physics.moveTo(hero, hero.targetX, hero.targetY, hero.speed);
@@ -165,7 +160,8 @@ function updateHeroPosition() {
       Phaser.Math.Distance.Between(hero.x, hero.y, hero.targetX, hero.targetY) <
       10
     ) {
-      hero.body.stop(); // Останавливаем героя
+      hero.body.setVelocity(0, 0); // Останавливаем героя
+      hero.body.reset(hero.targetX, hero.targetY); // Фиксируем позицию героя
     }
   }
 }
@@ -269,8 +265,7 @@ function updateSpectators() {
 
     // Обновляем позицию спрайта зрителя
     if (spectator.sprite) {
-      spectator.sprite.x = spectator.x;
-      spectator.sprite.y = spectator.y;
+      spectator.sprite.setPosition(spectator.x, spectator.y); // Обновляем позицию спрайта
     }
   });
 }
@@ -283,21 +278,17 @@ function handleHeroSpectatorCollision(hero, spectatorSprite) {
     score += 1;
     scoreText.setText("Score: " + score);
     spectator.scored = true;
+
+    // Увеличение здоровья героя на 10%
+    health += 10;
+    if (health > 100) {
+      health = 100; // Ограничиваем здоровье максимумом в 100%
+    }
+    updateHealthBar();
   }
 }
 
 // Функция для обработки коллизий героя с врагами
-// function handleHeroEnemyCollision(hero, enemy) {
-//   if (health > 0) {
-//     health -= 10; // Уменьшаем здоровье на 10
-//     if (health <= 0) {
-//       health = 0;
-//       // Перезапуск игры
-//       restartGame();
-//     }
-//     updateHealthBar();
-//   }
-// }
 function handleHeroEnemyCollision(hero, enemy) {
   if (health > 0) {
     health -= 10;
@@ -306,7 +297,8 @@ function handleHeroEnemyCollision(hero, enemy) {
       restartGame();
     }
     updateHealthBar();
-    enemy.body.stop(); // Останавливаем врага при коллизии
+    enemy.body.setVelocity(0, 0); // Останавливаем врага при коллизии
+    enemy.body.reset(enemy.x, enemy.y); // Фиксируем позицию врага
   }
 }
 
