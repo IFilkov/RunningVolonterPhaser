@@ -26,6 +26,7 @@ let hero;
 let enemy1;
 let enemy2;
 let enemy3;
+let enemy4;
 let graphics;
 let scoreText;
 let score = 0;
@@ -55,31 +56,6 @@ function preload() {
   }
 }
 
-// function updateEnemy1Position() {
-//   if (enemy1.active) {
-//     const targetX = Phaser.Math.Between(0, config.width);
-//     const targetY = Phaser.Math.Between(0, config.height);
-//     this.physics.moveTo(enemy1, targetX, targetY, enemy1.speed);
-//   }
-// }
-
-// // Функция для обновления позиции врага 2
-// function updateEnemy2Position() {
-//   if (enemy2.active) {
-//     const targetX = Phaser.Math.Between(0, config.width);
-//     const targetY = Phaser.Math.Between(0, config.height);
-//     this.physics.moveTo(enemy2, targetX, targetY, enemy2.speed);
-//   }
-// }
-
-// function updateEnemy3Position() {
-//   if (enemy3.active) {
-//     const targetX = Phaser.Math.Between(0, config.width);
-//     const targetY = Phaser.Math.Between(0, config.height);
-//     this.physics.moveTo(enemy3, targetX, targetY, enemy3.speed);
-//   }
-// }
-
 function create() {
   graphics = this.add.graphics({ fillStyle: { color: 0xffffff } });
 
@@ -106,6 +82,12 @@ function create() {
   enemy3.color = 0x663300;
   enemy3.speed = 110;
   enemy3.setCollideWorldBounds(true);
+
+  enemy4 = this.physics.add.image(50, 150, "empty");
+  enemy4.radius = spectatorRadius;
+  enemy4.color = 0xcccc00;
+  enemy4.speed = 90;
+  enemy4.setCollideWorldBounds(true);
 
   // Создание группы зрителей для обработки коллизий
   this.spectatorGroup = this.physics.add.group();
@@ -158,6 +140,7 @@ function create() {
   this.physics.add.overlap(hero, enemy1, handleHeroEnemyCollision, null, this);
   this.physics.add.overlap(hero, enemy2, handleHeroEnemyCollision, null, this);
   this.physics.add.overlap(hero, enemy3, handleHeroEnemyCollision, null, this);
+  this.physics.add.overlap(hero, enemy4, handleHeroEnemyCollision, null, this);
 
   // Обработка коллизий между врагами и зрителями
   this.physics.add.overlap(
@@ -181,6 +164,13 @@ function create() {
     null,
     this
   );
+  this.physics.add.overlap(
+    enemy4,
+    this.spectatorGroup,
+    handleEnemy4SpectatorCollision,
+    null,
+    this
+  );
 }
 
 function update() {
@@ -192,6 +182,7 @@ function update() {
   drawCircle(enemy1.x, enemy1.y, enemy1.radius, enemy1.color);
   drawCircle(enemy2.x, enemy2.y, enemy2.radius, enemy2.color);
   drawCircle(enemy3.x, enemy3.y, enemy3.radius, enemy3.color);
+  drawCircle(enemy4.x, enemy4.y, enemy4.radius, enemy4.color);
 
   // Обновление позиций зрителей
   updateSpectators();
@@ -200,6 +191,7 @@ function update() {
   updateEnemyPosition.call(this, enemy1);
   updateEnemyPosition.call(this, enemy2);
   updateEnemyPosition.call(this, enemy3);
+  updateEnemyPosition.call(this, enemy4);
   // updateHeroPosition.call(this);
   // updateEnemy1Position.call(this);
   // updateEnemy2Position.call(this);
@@ -254,6 +246,14 @@ function updateEnemyPosition(enemy) {
       }
     }
 
+    if (enemy === enemy4) {
+      const targetSpectator = findClosestSpectatorToEnemy4();
+      if (targetSpectator) {
+        enemy.targetSpectator = targetSpectator;
+        // enemy.targetSpectator.inCollisionWithEnemy3 = true;
+      }
+    }
+
     if (enemy.targetSpectator && !enemy.targetSpectator.moving) {
       enemy.targetSpectator = null;
     }
@@ -265,30 +265,6 @@ function updateEnemyPosition(enemy) {
     }
   }
 }
-// function updateEnemyPosition(enemy) {
-//   if (enemy.targetSpectator && enemy.targetSpectator.moving === false) {
-//     enemy.targetSpectator.inCollisionWithEnemy1 = false;
-//     enemy.targetSpectator.inCollisionWithEnemy2 = false;
-//     enemy.targetSpectator.inCollisionWithEnemy3 = false;
-//     enemy.targetSpectator = null; // Сбрасываем цель врага
-//     console.log("Reset collision flags for spectator after reaching target.");
-//   }
-
-//   if (enemy.targetSpectator) {
-//     this.physics.moveToObject(enemy, enemy.targetSpectator, enemy.speed);
-//   } else {
-//     if (enemy === enemy3) {
-//       const closestSpectator = findClosestSpectatorToEnemy3();
-//       if (closestSpectator) {
-//         enemy.targetSpectator = closestSpectator;
-//       }
-//     }
-
-//     if (hero && !enemy.targetSpectator) {
-//       this.physics.moveToObject(enemy, hero, enemy.speed);
-//     }
-//   }
-// }
 
 function resizeGame() {
   const width = window.innerWidth;
@@ -343,6 +319,8 @@ function addSpectator() {
         inCollisionWithEnemy2: false, // Флаг коллизии с врагом2
         inCollisionWithEnemy3: false, // Флаг коллизии с врагом3
         targetedByEnemy3: false, // Флаг преследования врагом3
+        inCollisionWithEnemy4: false,
+        targetedByEnemy4: false,
       };
       spectators.push(spectator);
       const spectatorSprite = game.scene.scenes[0].spectatorGroup.create(
@@ -395,6 +373,10 @@ function updateSpectators() {
           spectator.inCollisionWithEnemy3 = false;
           enemy3.targetSpectator = null; // Враг 3 больше не преследует этого зрителя
         }
+        if (spectator.inCollisionWithEnemy4) {
+          spectator.inCollisionWithEnemy4 = false;
+          enemy4.targetSpectator = null; // Враг 3 больше не преследует этого зрителя
+        }
       }
     }
     drawCircle(spectator.x, spectator.y, spectatorRadius, spectator.color);
@@ -406,56 +388,6 @@ function updateSpectators() {
   });
 }
 
-// Обработчик коллизий героя со зрителями
-// function handleHeroSpectatorCollision(hero, spectatorSprite) {
-//   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
-//   if (
-//     spectator &&
-//     !spectator.scored &&
-//     !spectator.inCollisionWithEnemy1 &&
-//     !spectator.inCollisionWithEnemy2 &&
-//     !spectator.inCollisionWithEnemy3 &&
-//     !spectator.inCollisionWithHero
-//   ) {
-//     spectator.color = 0x0000ff; // Перекрашиваем зрителя в голубой цвет
-//     score += 1;
-//     scoreText.setText("Score: " + score);
-//     spectator.scored = true;
-//     spectator.inCollisionWithHero = true; // Флаг, что зритель был в коллизии с героем
-//     spectator.targetedByEnemy3 = true; // Флаг, что зритель должен быть преследуем врагом3
-
-//     // Увеличение здоровья героя на 10%
-//     health += 10;
-//     if (health > 100) {
-//       health = 100; // Ограничиваем здоровье максимумом в 100%
-//     }
-//     updateHealthBar();
-//   }
-// }
-// function handleHeroSpectatorCollision(hero, spectatorSprite) {
-//   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
-//   if (
-//     spectator &&
-//     !spectator.scored &&
-//     !spectator.inCollisionWithEnemy1 &&
-//     !spectator.inCollisionWithEnemy2 &&
-//     !spectator.inCollisionWithEnemy3
-//   ) {
-//     spectator.color = 0x0000ff; // Перекрашиваем зрителя в голубой цвет
-//     score += 1;
-//     scoreText.setText("Score: " + score);
-//     spectator.scored = true;
-//     spectator.inCollisionWithHero = true;
-
-//     // Увеличение здоровья героя на 10%
-//     health += 10;
-//     if (health > 100) {
-//       health = 100; // Ограничиваем здоровье максимумом в 100%
-//     }
-//     updateHealthBar();
-//     console.log("Spectator in collision with hero set to true.");
-//   }
-// }
 function handleHeroSpectatorCollision(hero, spectatorSprite) {
   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
 
@@ -475,6 +407,7 @@ function handleHeroSpectatorCollision(hero, spectatorSprite) {
     spectator.inCollisionWithEnemy1 = false;
     spectator.inCollisionWithEnemy2 = false;
     spectator.inCollisionWithEnemy3 = false;
+    spectator.inCollisionWithEnemy4 = false;
 
     // Если зрителя преследует враг, сбрасываем targetSpectator у врага
     if (enemy1.targetSpectator === spectator) {
@@ -485,6 +418,9 @@ function handleHeroSpectatorCollision(hero, spectatorSprite) {
     }
     if (enemy3.targetSpectator === spectator) {
       enemy3.targetSpectator = null;
+    }
+    if (enemy4.targetSpectator === spectator) {
+      enemy4.targetSpectator = null;
     }
   }
 }
@@ -510,20 +446,6 @@ function handleHeroEnemyCollision(hero, enemy) {
   }
 }
 
-// Обработчик коллизий врага 1 со зрителями
-// function handleEnemy1SpectatorCollision(enemy, spectatorSprite) {
-//   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
-//   if (spectator && !spectator.scored && !spectator.inCollisionWithEnemy1) {
-//     if (!spectator.inCollisionWithHero) {
-//       spectator.color = 0xffa500; // Оранжевый цвет при коллизии с врагом 1
-//       spectator.inCollisionWithEnemy1 = true;
-//       enemy1.targetSpectator = spectator;
-
-//       score = Math.max(score - 1, 0); // Уменьшаем очки героя на 1, но не меньше 0
-//       scoreText.setText("Score: " + score);
-//     }
-//   }
-// }
 function handleEnemy1SpectatorCollision(enemy, spectatorSprite) {
   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
   if (
@@ -540,20 +462,6 @@ function handleEnemy1SpectatorCollision(enemy, spectatorSprite) {
   }
 }
 
-// Обработчик коллизий врага 2 со зрителями
-// function handleEnemy2SpectatorCollision(enemy, spectatorSprite) {
-//   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
-//   if (spectator && !spectator.scored && !spectator.inCollisionWithEnemy2) {
-//     if (!spectator.inCollisionWithHero && !spectator.inCollisionWithEnemy1) {
-//       spectator.color = 0x8a2be2; // Фиолетовый цвет при коллизии с врагом 2
-//       spectator.inCollisionWithEnemy2 = true;
-//       enemy2.targetSpectator = spectator;
-//       // Уменьшение очков героя
-//       score = Math.max(score - 1, 0); // Уменьшаем очки героя на 1, но не меньше 0
-//       scoreText.setText("Score: " + score);
-//     }
-//   }
-// }
 function handleEnemy2SpectatorCollision(enemy, spectatorSprite) {
   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
   if (
@@ -570,21 +478,6 @@ function handleEnemy2SpectatorCollision(enemy, spectatorSprite) {
   }
 }
 
-// Обработчик коллизий врага 3 со зрителями
-// function handleEnemy3SpectatorCollision(enemy, spectatorSprite) {
-//   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
-//   if (
-//     spectator &&
-//     spectator.inCollisionWithHero &&
-//     !spectator.inCollisionWithEnemy3
-//   ) {
-//     spectator.color = 0xff99ff; // Перекрашиваем зрителя в розовый цвет
-//     spectator.inCollisionWithEnemy3 = true; // Устанавливаем флаг, что зритель в коллизии с врагом3
-//     enemy.targetSpectator = spectator; // Враг3 переключается на этого зрителя
-//     score = Math.max(score - 1, 0); // Уменьшаем очки героя на 1, но не меньше 0
-//     scoreText.setText("Score: " + score);
-//   }
-// }
 function handleEnemy3SpectatorCollision(enemy, spectatorSprite) {
   const spectator = spectators.find((s) => s.sprite === spectatorSprite);
 
@@ -634,6 +527,44 @@ function handleEnemy3SpectatorCollision(enemy, spectatorSprite) {
   }
 }
 
+function handleEnemy4SpectatorCollision(enemy, spectatorSprite) {
+  const spectator = spectators.find((s) => s.sprite === spectatorSprite);
+
+  if (!spectator) {
+    console.log("No valid spectator found.");
+  } else {
+    if (!spectator.inCollisionWithHero) {
+      console.log("Spectator was not in collision with hero.");
+    }
+    if (spectator.inCollisionWithEnemy4) {
+      console.log("Spectator was already in collision with enemy4.");
+    }
+    if (
+      spectator &&
+      spectator.inCollisionWithHero &&
+      !spectator.inCollisionWithEnemy4
+    ) {
+      console.log("Updating spectator color and score.");
+      spectator.color = 0xff99ff; // Перекрашиваем зрителя в розовый цвет
+      spectator.inCollisionWithEnemy4 = true; // Устанавливаем флаг, что зритель в коллизии с врагом3
+      console.log(
+        "Set inCollisionWithEnemy4 to true for spectator:",
+        spectator
+      );
+      enemy.targetSpectator = spectator; // Враг3 переключается на этого зрителя
+      // score = Math.max(score - 1, 0); // Уменьшаем очки героя на 1, но не меньше 0
+      score = Math.max(score + 1);
+      scoreText.setText("Score: " + score);
+
+      console.log("Spectator color updated to pink.");
+      console.log(
+        "Spectator in collision with enemy4:",
+        spectator.inCollisionWithEnemy4
+      );
+      console.log("Hero's score:", score);
+    }
+  }
+}
 // Функция для обновления шкалы здоровья
 function updateHealthBar() {
   healthBar.clear();
@@ -643,27 +574,6 @@ function updateHealthBar() {
   healthBar.fillRect(config.width / 2 - 75, 50, (health / 100) * 150, 20);
 }
 
-// function findClosestSpectatorForEnemy1() {
-//   let closestSpectator = null;
-//   let minDistance = Infinity;
-
-//   spectators.forEach((spectator) => {
-//     if (!spectator.inCollisionWithHero && !spectator.inCollisionWithEnemy1) {
-//       const distance = Phaser.Math.Distance.Between(
-//         enemy1.x,
-//         enemy1.y,
-//         spectator.x,
-//         spectator.y
-//       );
-//       if (distance < minDistance) {
-//         minDistance = distance;
-//         closestSpectator = spectator;
-//       }
-//     }
-//   });
-
-//   return closestSpectator;
-// }
 function findClosestSpectatorForEnemy1() {
   let closestSpectator = null;
   let closestDistance = Infinity;
@@ -671,7 +581,8 @@ function findClosestSpectatorForEnemy1() {
   spectators.forEach((spectator) => {
     const isSpectatorTargeted =
       spectator === enemy2.targetSpectator ||
-      spectator === enemy3.targetSpectator;
+      spectator === enemy3.targetSpectator ||
+      spectator === enemy4.targetSpectator;
 
     if (!spectator.inCollisionWithHero && !isSpectatorTargeted) {
       const distance = Phaser.Math.Distance.Between(
@@ -689,27 +600,7 @@ function findClosestSpectatorForEnemy1() {
 
   return closestSpectator;
 }
-// function findClosestSpectatorToEnemy3() {
-//   let closestSpectator = null;
-//   let closestDistance = Infinity;
 
-//   spectators.forEach((spectator) => {
-//     if (spectator.inCollisionWithHero && !spectator.inCollisionWithEnemy3) {
-//       const distance = Phaser.Math.Distance.Between(
-//         enemy3.x,
-//         enemy3.y,
-//         spectator.x,
-//         spectator.y
-//       );
-//       if (distance < closestDistance) {
-//         closestDistance = distance;
-//         closestSpectator = spectator;
-//       }
-//     }
-//   });
-
-//   return closestSpectator;
-// }
 function findClosestSpectatorToEnemy3() {
   let closestSpectator = null;
   let closestDistance = Infinity;
@@ -735,33 +626,33 @@ function findClosestSpectatorToEnemy3() {
 
   return closestSpectator;
 }
-// function findClosestSpectatorToEnemy3() {
-//   let closestSpectator = null;
-//   let minDistance = Infinity;
 
-//   spectators.forEach((spectator) => {
-//     if (spectator.inCollisionWithHero && !spectator.inCollisionWithEnemy3) {
-//       const distance = Phaser.Math.Distance.Between(
-//         enemy3.x,
-//         enemy3.y,
-//         spectator.x,
-//         spectator.y
-//       );
-//       if (distance < minDistance) {
-//         minDistance = distance;
-//         closestSpectator = spectator;
-//       }
-//     }
-//   });
+function findClosestSpectatorToEnemy4() {
+  let closestSpectator = null;
+  let closestDistance = Infinity;
 
-//   if (closestSpectator) {
-//     console.log("Found closest spectator for enemy3:", closestSpectator);
-//   } else {
-//     console.log("No valid spectator found for enemy3.");
-//   }
+  spectators.forEach((spectator) => {
+    const isSpectatorTargeted =
+      spectator === enemy1.targetSpectator ||
+      spectator === enemy2.targetSpectator ||
+      spectator === enemy3.targetSpectator;
 
-//   return closestSpectator;
-// }
+    if (spectator.inCollisionWithHero && !isSpectatorTargeted) {
+      const distance = Phaser.Math.Distance.Between(
+        enemy4.x,
+        enemy4.y,
+        spectator.x,
+        spectator.y
+      );
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestSpectator = spectator;
+      }
+    }
+  });
+
+  return closestSpectator;
+}
 
 function findClosestSpectatorForEnemy2() {
   let closestSpectator = null;
@@ -771,7 +662,8 @@ function findClosestSpectatorForEnemy2() {
     if (
       !spectator.inCollisionWithEnemy2 &&
       !spectator.inCollisionWithEnemy1 &&
-      !spectator.inCollisionWithEnemy3
+      !spectator.inCollisionWithEnemy3 &&
+      !spectator.inCollisionWithEnemy4
     ) {
       const distance = Phaser.Math.Distance.Between(
         enemy2.x,
