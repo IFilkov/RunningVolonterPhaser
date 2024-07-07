@@ -1,3 +1,4 @@
+// window.localStorage.clear();
 const config = {
   type: Phaser.AUTO,
   width: window.innerWidth,
@@ -41,6 +42,7 @@ let topScore = localStorage.getItem("topScore")
   ? parseInt(localStorage.getItem("topScore"))
   : 0;
 let topScoreText;
+let newRecordText;
 
 const spectators = [];
 const spectatorRadius = 10;
@@ -150,6 +152,16 @@ function create() {
   );
   topScoreText.setScrollFactor(0);
 
+  // Инициализация текста New record!
+  newRecordText = this.add.text(
+    this.cameras.main.width / 2,
+    this.cameras.main.height / 2,
+    "New record!",
+    { fontSize: "48px", fill: "#f00" }
+  );
+  newRecordText.setOrigin(0.5);
+  newRecordText.setVisible(false);
+
   // Создание фона для шкалы здоровья
   healthBarBg = this.add.graphics();
   healthBarBg.fillStyle(0x000000, 1);
@@ -249,7 +261,7 @@ function update() {
 
   // Обновление позиции счётчика и шкалы здоровья при изменении размера окна
   scoreText.setPosition(config.width / 2 - 50, 20);
-  topScoreText.setPosition(config.width / 2 - -80, 20);
+  topScoreText.setPosition(config.width / 2 - 80, 600);
   healthBarBg.setPosition(config.width / 2 - 75, 50);
   updateHealthBar();
 }
@@ -506,11 +518,12 @@ function handleHeroSpectatorCollision(hero, spectatorSprite) {
     }
 
     // Обновление Top Score
-    if (score > topScore) {
-      topScore = score;
-      localStorage.setItem("topScore", topScore);
-      topScoreText.setText("Top Score: " + topScore);
-    }
+    // if (score > topScore) {
+    //   topScore = score;
+    //   localStorage.setItem("topScore", topScore);
+    //   topScoreText.setText("Top Score: " + topScore);
+    //   // showNewRecordText();
+    // }
 
     // Сбрасываем флаги коллизий зрителя с врагами
     spectator.inCollisionWithEnemy1 = false;
@@ -946,15 +959,59 @@ function handleEnemy2Behavior() {
     this.physics.moveToObject(enemy2, hero, enemy2.speed);
   }
 }
-// Функция для перезапуска игры
-function restartGame() {
-  score = 0;
-  health = 100;
-  spectators.length = 0;
-  availableSeats.length = 0;
-  game.scene.scenes[0].scene.restart();
+
+// обновление рекорда
+function showNewRecordText() {
+  newRecordText.setVisible(true);
+  this.time.delayedCall(3000, () => {
+    newRecordText.setVisible(false);
+  });
 }
 
+// Функция для перезапуска игры
+// function restartGame() {
+//   score = 0;
+//   health = 100;
+//   spectators.length = 0;
+//   availableSeats.length = 0;
+//   game.scene.scenes[0].scene.restart();
+// }
+function restartGame() {
+  // Обновление Top Score
+  if (score > topScore) {
+    topScore = score;
+    localStorage.setItem("topScore", topScore);
+    topScoreText.setText("Top Score: " + topScore);
+
+    // Показать текст нового рекорда
+    // showNewRecordText();
+  }
+
+  // Сброс текущих очков
+  score = 0;
+  scoreText.setText("Score: " + score);
+
+  // Сброс здоровья
+  health = 100;
+  updateHealthBar();
+
+  // Очистка зрителей и врагов
+  spectators.forEach((spectator) => {
+    if (spectator.sprite) {
+      spectator.sprite.destroy();
+    }
+  });
+  spectators.length = 0;
+
+  enemy1.targetSpectator = null;
+  enemy2.targetSpectator = null;
+  enemy3.targetSpectator = null;
+
+  // Перезапуск игры (перезапуск сцены)
+  // this.scene.restart();
+  // scene.scene.restart();
+  game.scene.scenes[0].scene.restart();
+}
 // Функция для рисования мест для зрителей
 function drawSeats(startX, startY, rows, cols) {
   for (let i = 0; i < rows; i++) {
