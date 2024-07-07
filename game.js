@@ -43,6 +43,7 @@ let topScore = localStorage.getItem("topScore")
   : 0;
 let topScoreText;
 let newRecordText;
+let gameOver = false;
 
 const spectators = [];
 const spectatorRadius = 10;
@@ -161,6 +162,12 @@ function create() {
   );
   newRecordText.setOrigin(0.5);
   newRecordText.setVisible(false);
+
+  // Проверка, был ли установлен новый рекорд
+  if (localStorage.getItem("newRecord") === "true") {
+    localStorage.setItem("newRecord", "false");
+    showNewRecordText();
+  }
 
   // Создание фона для шкалы здоровья
   healthBarBg = this.add.graphics();
@@ -961,13 +968,18 @@ function handleEnemy2Behavior() {
 }
 
 // обновление рекорда
-function showNewRecordText() {
+// function showNewRecordText() {
+//   newRecordText.setVisible(true);
+//   this.time.delayedCall(3000, () => {
+//     newRecordText.setVisible(false);
+//   });
+// }
+function showNewRecordText(scene) {
   newRecordText.setVisible(true);
-  this.time.delayedCall(3000, () => {
+  game.scene.scenes[0].time.delayedCall(4000, () => {
     newRecordText.setVisible(false);
   });
 }
-
 // Функция для перезапуска игры
 // function restartGame() {
 //   score = 0;
@@ -981,6 +993,7 @@ function restartGame() {
   if (score > topScore) {
     topScore = score;
     localStorage.setItem("topScore", topScore);
+    localStorage.setItem("newRecord", "true"); // Установка флага нового рекорда
     topScoreText.setText("Top Score: " + topScore);
 
     // Показать текст нового рекорда
