@@ -82,7 +82,7 @@ let heroDirectionY = 0;
 let movingRandomly = false;
 
 let direction = { x: 1, y: 1 };
-let speed = 100; // скорость передвижения
+let speed = 200; // скорость передвижения
 let changeDirectionTime = 2000; // смена направления каждые 8 секунд
 let lastDirectionChange = 0;
 let controlMode = "autopilot"; // Режим управления: 'autopilot', 'mouse', 'gamepad'
@@ -195,44 +195,44 @@ function toggleHeroVisibility() {
   }
 }
 
-function moveHeroToTarget(targetSpectator) {
-  if (hero.target) {
-    this.physics.moveToObject(hero, target, hero.speed); // Убедитесь, что this указывает на объект сцены
-    console.log("ВЫВОД В АВТОПЛЕЙ");
-  }
-}
+// function moveHeroToTarget(targetSpectator) {
+//   if (hero.target) {
+//     this.physics.moveToObject(hero, target, hero.speed); // Убедитесь, что this указывает на объект сцены
+//     console.log("ВЫВОД В АВТОПЛЕЙ");
+//   }
+// }
 
-if (isAutoPlay && targetSpectator) {
-  moveHeroToTarget.call(this, targetSpectator); // Привязываем this
-}
+// if (isAutoPlay && targetSpectator) {
+//   moveHeroToTarget.call(this, targetSpectator); // Привязываем this
+// }
 
-function toggleAutoPlay() {
-  isAutoPlay = !isAutoPlay;
+// function toggleAutoPlay() {
+//   isAutoPlay = !isAutoPlay;
 
-  if (isAutoPlay) {
-    toggleHeroVisibility();
-    moveHeroToTarget();
-    // Найти ближайшего зрителя
-    targetSpectator = findClosestSpectator();
-    autoPlayText.setVisible(true);
+//   if (isAutoPlay) {
+//     toggleHeroVisibility();
+//     moveHeroToTarget();
+//     // Найти ближайшего зрителя
+//     targetSpectator = findClosestSpectator();
+//     autoPlayText.setVisible(true);
 
-    console.log("AutoPlay activated. Target spectator:", targetSpectator);
+//     console.log("AutoPlay activated. Target spectator:", targetSpectator);
 
-    if (targetSpectator) {
-      moveToTarget(targetSpectator);
-    }
-  } else {
-    // Сброс скорости героя при деактивации автопилота
-    hero.body.enable = true;
-    hero.x = 400;
-    hero.y = 300;
-    hero.visible = true;
-    // hero.setVelocity(0, 0);
-    autoPlayText.setVisible(false);
-    hero.setVisible(true); // Показать героя
-    console.log("AutoPlay deactivated. Manual control restored.");
-  }
-}
+//     if (targetSpectator) {
+//       moveToTarget(targetSpectator);
+//     }
+//   } else {
+//     // Сброс скорости героя при деактивации автопилота
+//     hero.body.enable = true;
+//     hero.x = 400;
+//     hero.y = 300;
+//     hero.visible = true;
+//     // hero.setVelocity(0, 0);
+//     autoPlayText.setVisible(false);
+//     hero.setVisible(true); // Показать героя
+//     console.log("AutoPlay deactivated. Manual control restored.");
+//   }
+// }
 
 function create() {
   graphics = this.add.graphics({ fillStyle: { color: 0xffffff } });
@@ -303,10 +303,10 @@ function create() {
   // cursors = this.input.keyboard.createCursorKeys();
 
   // Настройка управления с сенсорного экрана и мыши
-  this.input.on("pointermove", function (pointer) {
-    hero.targetX = pointer.worldX;
-    hero.targetY = pointer.worldY;
-  });
+  // this.input.on("pointermove", function (pointer) {
+  //   hero.targetX = pointer.worldX;
+  //   hero.targetY = pointer.worldY;
+  // });
 
   // // Настройка управления с геймпада
   // if (this.input.gamepad) {
@@ -357,6 +357,11 @@ function create() {
   });
 
   // Отслеживание позиции мыши
+  // this.input.on("pointermove", (pointer) => {
+  //   hero.targetX = pointer.worldX;
+  //   hero.targetY = pointer.worldY;
+  // });
+
   this.input.on("pointermove", (pointer) => {
     mousePos.x = pointer.x;
     mousePos.y = pointer.y;
@@ -548,7 +553,7 @@ function update(time, delta) {
   //   updateHeroPosition.call(this);
   // }
 
-  updateHeroPosition.call(this);
+  // updateHeroPosition.call(this);
   updateEnemyPosition.call(this, enemy1);
   updateEnemyPosition.call(this, enemy2);
   updateEnemyPosition.call(this, enemy3);
@@ -769,27 +774,27 @@ function drawCircle(x, y, radius, color) {
   graphics.fillCircle(x, y, radius);
 }
 
-function updateHeroPosition() {
-  if (isAutoPlay && targetSpectator) {
-    moveHeroToTarget(targetSpectator);
-  } else {
-    if (hero.targetX !== undefined && hero.targetY !== undefined) {
-      this.physics.moveTo(hero, hero.targetX, hero.targetY, hero.speed);
-      // Проверяем, достиг ли герой цели
-      if (
-        Phaser.Math.Distance.Between(
-          hero.x,
-          hero.y,
-          hero.targetX,
-          hero.targetY
-        ) < 10
-      ) {
-        hero.body.setVelocity(0, 0); // Останавливаем героя
-        hero.body.reset(hero.targetX, hero.targetY); // Фиксируем позицию героя
-      }
-    }
-  }
-}
+// function updateHeroPosition() {
+//   if (isAutoPlay && targetSpectator) {
+//     moveHeroToTarget(targetSpectator);
+//   } else {
+//     if (hero.targetX !== undefined && hero.targetY !== undefined) {
+//       this.physics.moveTo(hero, hero.targetX, hero.targetY, hero.speed);
+//       // Проверяем, достиг ли герой цели
+//       if (
+//         Phaser.Math.Distance.Between(
+//           hero.x,
+//           hero.y,
+//           hero.targetX,
+//           hero.targetY
+//         ) < 10
+//       ) {
+//         hero.body.setVelocity(0, 0); // Останавливаем героя
+//         hero.body.reset(hero.targetX, hero.targetY); // Фиксируем позицию героя
+//       }
+//     }
+//   }
+// }
 // function updateHeroPosition() {
 //   if (isAutoPlay && targetSpectator) {
 //     moveHeroToTarget(targetSpectator);
